@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const pool = require("./config/db");
 
 const errorMiddleware = require("./middleware/error.middleware");
 
@@ -25,44 +24,6 @@ app.get("/", (req, res) => {
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
-});
-
-/* ======================
-   TEMP DB INIT ROUTE
-   (will remove later)
-====================== */
-
-app.get("/init-db", async (req, res) => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS orders (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        status TEXT DEFAULT 'pending',
-        total_price NUMERIC(10,2),
-        latitude DECIMAL(10,8),
-        longitude DECIMAL(11,8),
-        delivery_address TEXT,
-        coins_awarded BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    res.json({ message: "Tables created successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "DB init failed" });
-  }
 });
 
 /* ======================
