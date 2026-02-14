@@ -1,0 +1,9 @@
+
+ALTER TABLE orders
+ADD COLUMN latitude DECIMAL(10,8) NOT NULL,
+ADD COLUMN longitude DECIMAL(11,8) NOT NULL,
+ADD COLUMN delivery_address TEXT;
+
+
+ALTER TABLE orders
+ADD COLUMN coins_awarded BOOLEAN DEFAULT FALSE;
