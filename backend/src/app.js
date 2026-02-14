@@ -1,30 +1,36 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const pool = require("./config/db");
 
 const errorMiddleware = require("./middleware/error.middleware");
 
 const app = express();
 
+/* ======================
+   GLOBAL MIDDLEWARE
+====================== */
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/auth", require("./routes/auth.routes"));
-app.use("/api/restaurants", require("./routes/restaurant.routes"));
-app.use("/api/orders", require("./routes/order.routes"));
-app.use("/api/wallet", require("./routes/wallet.routes"));
-app.use("/api/admin", require("./routes/admin.routes"));
+/* ======================
+   SYSTEM ROUTES
+====================== */
+
+app.get("/", (req, res) => {
+  res.json({ message: "CampusEats API running" });
+});
 
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
 
-app.use(errorMiddleware);
-
-module.exports = app;
-
-const pool = require("./config/db");
+/* ======================
+   TEMP DB INIT ROUTE
+   (will remove later)
+====================== */
 
 app.get("/init-db", async (req, res) => {
   try {
@@ -52,9 +58,27 @@ app.get("/init-db", async (req, res) => {
       );
     `);
 
-    res.json({ message: "Tables created" });
+    res.json({ message: "Tables created successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "DB init failed" });
   }
 });
+
+/* ======================
+   API ROUTES
+====================== */
+
+app.use("/api/auth", require("./routes/auth.routes"));
+app.use("/api/restaurants", require("./routes/restaurant.routes"));
+app.use("/api/orders", require("./routes/order.routes"));
+app.use("/api/wallet", require("./routes/wallet.routes"));
+app.use("/api/admin", require("./routes/admin.routes"));
+
+/* ======================
+   ERROR HANDLER
+====================== */
+
+app.use(errorMiddleware);
+
+module.exports = app;
