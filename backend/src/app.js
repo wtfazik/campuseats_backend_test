@@ -20,6 +20,7 @@ app.use("/api/restaurants", require("./routes/restaurant.routes"));
 app.use("/api/orders", require("./routes/order.routes"));
 app.use("/api/wallet", require("./routes/wallet.routes"));
 app.use("/api/admin", require("./routes/admin.routes"));
+app.use("/api/reviews", require("./routes/review.routes")); // 🔥 НОВОЕ
 
 /* =========================
    HEALTH CHECK
