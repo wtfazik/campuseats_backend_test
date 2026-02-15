@@ -1,60 +1,32 @@
-exports.createOrder = async (data) => {
-  const {
-    user_id,
-    total_amount,
-    payment_method,
-    delivery_lat,
-    delivery_lng,
-    coins_used = 0
-  } = data;
+const pool = require("../config/db");
 
-  // Проверяем пользователя
-  const [users] = await db.query(
-    "SELECT * FROM users WHERE id = ?",
-    [user_id]
-  );
+const createOrder = async (data) => {
+  const { user_id, total_price, delivery_address, latitude, longitude } = data;
 
-  if (users.length === 0) {
-    throw new Error("User not found");
-  }
-
-  const user = users[0];
-
-  // Проверка баланса
-  if (coins_used > user.balance) {
-    throw new Error("Not enough balance");
-  }
-
-  // Ограничение — максимум 50% можно оплатить баллами
-  const maxAllowed = total_amount * 0.5;
-
-  if (coins_used > maxAllowed) {
-    throw new Error("You can use max 50% of order in coins");
-  }
-
-  // Итоговая сумма после использования coins
-  const finalAmount = total_amount - coins_used;
-
-  // Создаём заказ
-  const [result] = await db.query(
+  const result = await pool.query(
     `INSERT INTO orders 
-     (user_id, total_amount, payment_method, delivery_lat, delivery_lng)
-     VALUES (?, ?, ?, ?, ?)`,
-    [user_id, finalAmount, payment_method, delivery_lat, delivery_lng]
+      (user_id, total_price, delivery_address, latitude, longitude, status)
+     VALUES ($1, $2, $3, $4, $5, 'pending')
+     RETURNING *`,
+    [user_id, total_price, delivery_address, latitude, longitude]
   );
 
-  // Если использовали coins — списываем
-  if (coins_used > 0) {
-    await db.query(
-      "UPDATE users SET balance = balance - ? WHERE id = ?",
-      [coins_used, user_id]
-    );
-  }
+  return result.rows[0];
+};
 
-  return {
-    message: "Order created",
-    order_id: result.insertId,
-    paid_with_coins: coins_used,
-    final_amount: finalAmount
-  };
+const updateStatus = async (id, status) => {
+  const result = await pool.query(
+    `UPDATE orders
+     SET status = $1
+     WHERE id = $2
+     RETURNING *`,
+    [status, id]
+  );
+
+  return result.rows[0];
+};
+
+module.exports = {
+  createOrder,
+  updateStatus
 };
