@@ -2,102 +2,88 @@ const router = require("express").Router();
 const axios = require("axios");
 const pool = require("../config/db");
 
-const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const GROUP_ID = "-1003714441392";
 
-/* =========================
-   TELEGRAM WEBHOOK
-========================= */
+/*
+=========================================
+WEBHOOK ENTRY POINT
+=========================================
+*/
 
 router.post("/webhook", async (req, res) => {
   try {
-    const body = req.body;
+    const update = req.body;
 
-    /* =========================
-       CALLBACK BUTTONS
-    ========================== */
-
-    if (body.callback_query) {
-      const callback = body.callback_query;
-      const data = callback.data; // verify_approve_12
-      const callbackId = callback.id;
-
-      if (data.startsWith("verify_")) {
-        const parts = data.split("_");
-        const action = parts[1];     // approve / reject / retry
-        const verificationId = parts[2];
-
-        const result = await pool.query(
-          "SELECT * FROM verification_requests WHERE id = $1",
-          [verificationId]
-        );
-
-        if (result.rows.length === 0) {
-          return res.status(200).end();
-        }
-
-        const request = result.rows[0];
-
-        /* ===== APPROVE ===== */
-
-        if (action === "approve") {
-          await pool.query(
-            "UPDATE verification_requests SET status='approved' WHERE id=$1",
-            [verificationId]
-          );
-
-          await pool.query(
-            "UPDATE users SET is_verified=true WHERE id=$1",
-            [request.user_id]
-          );
-        }
-
-        /* ===== REJECT ===== */
-
-        if (action === "reject") {
-          await pool.query(
-            "UPDATE verification_requests SET status='rejected' WHERE id=$1",
-            [verificationId]
-          );
-        }
-
-        /* ===== RETRY ===== */
-
-        if (action === "retry") {
-          await pool.query(
-            "UPDATE verification_requests SET status='retry' WHERE id=$1",
-            [verificationId]
-          );
-        }
-
-        /* ===== REMOVE BUTTONS AFTER CLICK ===== */
-
-        await axios.post(
-          `https://api.telegram.org/bot${TELEGRAM_TOKEN}/editMessageReplyMarkup`,
-          {
-            chat_id: callback.message.chat.id,
-            message_id: callback.message.message_id,
-            reply_markup: { inline_keyboard: [] }
-          }
-        );
-
-        /* ===== ANSWER CALLBACK ===== */
-
-        await axios.post(
-          `https://api.telegram.org/bot${TELEGRAM_TOKEN}/answerCallbackQuery`,
-          {
-            callback_query_id: callbackId,
-            text: "Updated"
-          }
-        );
-      }
+    // 1️⃣ Если нажали кнопку
+    if (update.callback_query) {
+      await handleCallback(update.callback_query);
     }
 
-    res.status(200).end();
-
+    res.sendStatus(200);
   } catch (err) {
-    console.error(err);
-    res.status(200).end();
+    console.error("Telegram webhook error:", err);
+    res.sendStatus(500);
   }
 });
 
 module.exports = router;
+
+/*
+=========================================
+HANDLE CALLBACK
+=========================================
+*/
+
+async function handleCallback(callbackQuery) {
+  const data = callbackQuery.data;
+  const messageId = callbackQuery.message.message_id;
+
+  if (!data) return;
+
+  const [action, userId] = data.split(":");
+
+  if (!userId) return;
+
+  if (action === "approve") {
+    await pool.query(
+      `UPDATE users SET is_verified = true WHERE id = $1`,
+      [userId]
+    );
+
+    await editMessage(messageId, "✅ Verification approved");
+
+  } else if (action === "reject") {
+    await pool.query(
+      `UPDATE users SET is_verified = false WHERE id = $1`,
+      [userId]
+    );
+
+    await editMessage(messageId, "❌ Verification rejected");
+
+  } else if (action === "retry") {
+    await pool.query(
+      `UPDATE users SET verification_photo = NULL WHERE id = $1`,
+      [userId]
+    );
+
+    await editMessage(messageId, "🔄 New photo requested");
+  }
+}
+
+/*
+=========================================
+EDIT MESSAGE
+=========================================
+*/
+
+async function editMessage(messageId, text) {
+  await axios.post(
+    `https://api.telegram.org/bot${BOT_TOKEN}/editMessageCaption`,
+    {
+      chat_id: GROUP_ID,
+      message_id: messageId,
+      caption: text
+    }
+  );
+}

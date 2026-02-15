@@ -1,27 +1,21 @@
 const jwt = require("jsonwebtoken");
 
-module.exports = (req, res, next) => {
+const JWT_SECRET = process.env.JWT_SECRET;
+
+module.exports = function authMiddleware(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
+    const header = req.headers.authorization;
 
-    if (!authHeader) {
-      return res.status(401).json({ message: "Authorization header missing" });
+    if (!header || !header.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "No token" });
     }
 
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Invalid authorization format" });
-    }
+    const token = header.split(" ")[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
 
-    const token = authHeader.split(" ")[1];
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = decoded;
-
+    req.user = decoded; // { id, role, iat, exp }
     next();
-
   } catch (err) {
-    console.error("Auth error:", err.message);
-    return res.status(401).json({ message: "Invalid or expired token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
