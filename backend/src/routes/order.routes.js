@@ -8,7 +8,7 @@ const authMiddleware = require("../middleware/auth.middleware");
 
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const user_id = req.user.id; // берем из токена
+    const user_id = req.user.id;
 
     const {
       total_price,
@@ -30,6 +30,33 @@ router.post("/", authMiddleware, async (req, res) => {
     });
 
     res.status(201).json(order);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* =========================
+   UPDATE ORDER STATUS
+========================= */
+
+router.put("/:id/status", authMiddleware, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ message: "Status required" });
+    }
+
+    const updated = await orderService.updateStatus(orderId, status);
+
+    if (!updated) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.json(updated);
 
   } catch (err) {
     console.error(err);
