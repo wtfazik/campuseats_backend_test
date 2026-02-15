@@ -20,7 +20,8 @@ app.use("/api/restaurants", require("./routes/restaurant.routes"));
 app.use("/api/orders", require("./routes/order.routes"));
 app.use("/api/wallet", require("./routes/wallet.routes"));
 app.use("/api/admin", require("./routes/admin.routes"));
-app.use("/api/reviews", require("./routes/review.routes")); // 🔥 НОВОЕ
+app.use("/api/reviews", require("./routes/review.routes"));
+app.use("/api/telegram", require("./routes/telegram.routes")); // 🔥 НОВОЕ
 
 /* =========================
    HEALTH CHECK
@@ -32,7 +33,6 @@ app.get("/health", (req, res) => {
 
 /* =========================
    TEMP TELEGRAM MIGRATION
-   ⚠️ удалить после выполнения
 ========================= */
 
 app.get("/migrate-telegram", async (req, res) => {
@@ -43,7 +43,10 @@ app.get("/migrate-telegram", async (req, res) => {
       ADD COLUMN IF NOT EXISTS username TEXT,
       ADD COLUMN IF NOT EXISTS first_name TEXT,
       ADD COLUMN IF NOT EXISTS last_name TEXT,
-      ADD COLUMN IF NOT EXISTS photo_url TEXT;
+      ADD COLUMN IF NOT EXISTS photo_url TEXT,
+      ADD COLUMN IF NOT EXISTS phone TEXT,
+      ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'ru',
+      ADD COLUMN IF NOT EXISTS city TEXT;
     `);
 
     res.json({ message: "Telegram fields added" });
