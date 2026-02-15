@@ -22,6 +22,7 @@ app.use("/api/wallet", require("./routes/wallet.routes"));
 app.use("/api/admin", require("./routes/admin.routes"));
 app.use("/api/reviews", require("./routes/review.routes"));
 app.use("/api/telegram", require("./routes/telegram.routes")); // 🔥 НОВОЕ
+app.use("/api/verification", require("./routes/verification.routes"));
 
 /* =========================
    HEALTH CHECK
@@ -30,6 +31,7 @@ app.use("/api/telegram", require("./routes/telegram.routes")); // 🔥 НОВО�
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
+
 
 /* =========================
    TEMP TELEGRAM MIGRATION
