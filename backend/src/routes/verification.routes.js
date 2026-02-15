@@ -1,6 +1,6 @@
 const router = require("express").Router();
-const authMiddleware = require("../middleware/auth.middleware");
 const pool = require("../config/db");
+const authMiddleware = require("../middleware/auth.middleware");
 
 /* =========================
    SEND VERIFICATION REQUEST
@@ -12,15 +12,19 @@ router.post("/", authMiddleware, async (req, res) => {
     const { photo_url } = req.body;
 
     if (!photo_url) {
-      return res.status(400).json({ message: "Photo URL required" });
+      return res.status(400).json({ message: "Photo is required" });
     }
 
-    // сохраняем запрос верификации
+    // сохраняем фото и ставим флаг student=true
     await pool.query(
-      `UPDATE users
-       SET is_student = true,
-           verification_photo = $1
-       WHERE id = $2`,
+      `
+      UPDATE users
+      SET 
+        verification_photo = $1,
+        is_student = true,
+        is_verified = false
+      WHERE id = $2
+      `,
       [photo_url, userId]
     );
 
@@ -33,4 +37,3 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
-s
