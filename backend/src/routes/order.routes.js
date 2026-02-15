@@ -47,16 +47,16 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
     const { status } = req.body;
 
     if (!status) {
-      return res.status(400).json({ message: "Status required" });
+      return res.status(400).json({ message: "Status is required" });
     }
 
-    const updated = await orderService.updateStatus(orderId, status);
+    const updatedOrder = await orderService.updateStatus(orderId, status);
 
-    if (!updated) {
+    if (!updatedOrder) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    res.json(updated);
+    res.json(updatedOrder);
 
   } catch (err) {
     console.error(err);
