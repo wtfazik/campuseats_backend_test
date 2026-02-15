@@ -3,7 +3,6 @@ const cors = require("cors");
 const helmet = require("helmet");
 
 const errorMiddleware = require("./middleware/error.middleware");
-const pool = require("./config/db");
 
 const app = express();
 
@@ -16,13 +15,9 @@ app.use(express.json());
 ========================= */
 
 app.use("/api/auth", require("./routes/auth.routes"));
-app.use("/api/restaurants", require("./routes/restaurant.routes"));
 app.use("/api/orders", require("./routes/order.routes"));
-app.use("/api/wallet", require("./routes/wallet.routes"));
-app.use("/api/admin", require("./routes/admin.routes"));
-app.use("/api/reviews", require("./routes/review.routes"));
-app.use("/api/telegram", require("./routes/telegram.routes")); // 🔥 НОВОЕ
 app.use("/api/verification", require("./routes/verification.routes"));
+app.use("/api/telegram", require("./routes/telegram.routes"));
 
 /* =========================
    HEALTH CHECK
@@ -31,36 +26,6 @@ app.use("/api/verification", require("./routes/verification.routes"));
 app.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
-
-
-/* =========================
-   TEMP TELEGRAM MIGRATION
-========================= */
-
-app.get("/migrate-telegram", async (req, res) => {
-  try {
-    await pool.query(`
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS telegram_id BIGINT UNIQUE,
-      ADD COLUMN IF NOT EXISTS username TEXT,
-      ADD COLUMN IF NOT EXISTS first_name TEXT,
-      ADD COLUMN IF NOT EXISTS last_name TEXT,
-      ADD COLUMN IF NOT EXISTS photo_url TEXT,
-      ADD COLUMN IF NOT EXISTS phone TEXT,
-      ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'ru',
-      ADD COLUMN IF NOT EXISTS city TEXT;
-    `);
-
-    res.json({ message: "Telegram fields added" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Migration failed" });
-  }
-});
-
-/* =========================
-   ERROR HANDLER
-========================= */
 
 app.use(errorMiddleware);
 
