@@ -1,94 +1,39 @@
-const express = require("express");
-const router = express.Router();
-const pool = require("../config/db");
+const router = require("express").Router();
+const orderService = require("../services/order.service");
+const authMiddleware = require("../middleware/auth.middleware");
 
-/* ===============================
+/* =========================
    CREATE ORDER
-=============================== */
-router.post("/", async (req, res) => {
+========================= */
+
+router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { user_id, total_price, delivery_address, latitude, longitude } = req.body;
+    const user_id = req.user.id; // берем из токена
 
-    const result = await pool.query(
-      `INSERT INTO orders 
-       (user_id, total_price, delivery_address, latitude, longitude, status, coins_awarded)
-       VALUES ($1, $2, $3, $4, $5, 'pending', false)
-       RETURNING *`,
-      [user_id, total_price, delivery_address, latitude, longitude]
-    );
+    const {
+      total_price,
+      delivery_address,
+      latitude,
+      longitude
+    } = req.body;
 
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to create order" });
-  }
-});
-
-/* ===============================
-   UPDATE ORDER STATUS
-=============================== */
-router.put("/:id/status", async (req, res) => {
-  try {
-    const { status } = req.body;
-    const orderId = req.params.id;
-
-    // Получаем заказ
-    const orderRes = await pool.query(
-      `SELECT * FROM orders WHERE id = $1`,
-      [orderId]
-    );
-
-    if (orderRes.rows.length === 0) {
-      return res.status(404).json({ message: "Order not found" });
+    if (!total_price || !delivery_address) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const order = orderRes.rows[0];
+    const order = await orderService.createOrder({
+      user_id,
+      total_price,
+      delivery_address,
+      latitude,
+      longitude
+    });
 
-    // Обновляем статус
-    await pool.query(
-      `UPDATE orders SET status = $1 WHERE id = $2`,
-      [status, orderId]
-    );
-
-    /* ===============================
-       CASHBACK LOGIC
-    =============================== */
-
-    if (
-      status === "delivered" &&
-      order.coins_awarded === false
-    ) {
-      const userRes = await pool.query(
-        `SELECT * FROM users WHERE id = $1`,
-        [order.user_id]
-      );
-
-      const user = userRes.rows[0];
-
-      if (user && user.is_verified === true) {
-        const cashback = Number(order.total_price) * 0.05;
-
-        await pool.query(
-          `UPDATE users 
-           SET balance = balance + $1 
-           WHERE id = $2`,
-          [cashback, order.user_id]
-        );
-
-        await pool.query(
-          `UPDATE orders 
-           SET coins_awarded = true 
-           WHERE id = $1`,
-          [orderId]
-        );
-      }
-    }
-
-    res.json({ message: "Status updated successfully" });
+    res.status(201).json(order);
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Failed to update status" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
